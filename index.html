@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mots Fantômes 👻</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --neon: #00ffcc;
+            --ghost: #ffffff;
+            --accent: #ff00ff;
+            --grey: #888;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--ghost);
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container { max-width: 500px; width: 100%; }
+
+        h1 {
+            color: var(--neon);
+            text-shadow: 0 0 15px var(--neon);
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+
+        .card {
+            background: #161616;
+            padding: 25px;
+            border-radius: 25px;
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.15);
+            border: 1px solid #333;
+            margin-top: 15px;
+        }
+
+        #sentence {
+            font-size: 1.5rem;
+            margin: 20px 0;
+            min-height: 90px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: keep-all;
+        }
+
+        .blur-text { filter: blur(8px); user-select: none; transition: filter 0.3s; }
+
+        button {
+            background: transparent;
+            border: 2px solid var(--neon);
+            color: var(--neon);
+            padding: 12px 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            margin: 8px 4px;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: var(--neon);
+            color: var(--bg);
+            box-shadow: 0 0 20px var(--neon);
+        }
+
+        .settings-box {
+            background: #222;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+
+        select {
+            background: #1a1a1a;
+            color: var(--neon);
+            border: 1px solid var(--neon);
+            padding: 10px;
+            border-radius: 10px;
+            width: 90%;
+            margin: 15px 0;
+            outline: none;
+            font-family: inherit;
+        }
+
+        input[type="range"] { width: 80%; accent-color: var(--neon); }
+
+        input[type="text"], input[type="email"], textarea {
+            background: #222;
+            border: 1px solid #444;
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            width: 85%;
+            margin: 10px 0;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        #feedback { margin: 10px 0; font-weight: bold; min-height: 24px; color: var(--neon); }
+
+        .highlight-step { color: var(--neon); text-decoration: underline; }
+
+        .ghost-final {
+            color: var(--accent);
+            font-weight: bold;
+            text-shadow: 0 0 10px var(--accent);
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        /* --- STYLES DES FENÊTRES POP-UP (MODALES) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-box {
+            background: #161616;
+            padding: 25px;
+            border-radius: 20px;
+            border: 2px solid var(--neon);
+            max-width: 85%;
+            width: 380px;
+        }
+
+        .footer-links { margin-top: 30px; padding-bottom: 20px; }
+        .secondary-btn { font-size: 0.75rem; border-color: var(--grey); color: var(--grey); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>MOTS FANTÔMES 👻</h1>
+    
+    <div id="intro-rules">
+        <p>Un mot se cache phonétiquement entre d'autres mots... Saurez-vous l'entendre ?</p>
+        <button id="startBtn" onclick="init()">JOUER</button>
+    </div>
+
+    <div id="game-ui" class="hidden">
+        <div class="card">
+            <div id="sentence" class="blur-text">...</div>
+            
+            <button id="toggleBlur" onclick="toggleBlur()">👁️ TEXTE</button>
+            <button onclick="playVoice()">🔊 ÉCOUTER</button>
+
+            <div class="settings-box">
+                <label style="font-size: 0.8rem; color: var(--neon);">VITESSE : <span id="speedVal">0.8</span>x</label><br>
+                <input type="range" id="speedSlider" min="0.4" max="1" step="0.1" value="0.8" 
+                       oninput="document.getElementById('speedVal').innerText = this.value">
+            </div>
+
+            <input type="text" id="userInput" placeholder="Quel est le mot caché ?" autocomplete="off">
+            <br>
+            <button onclick="check()">VALIDER</button>
+            <div id="feedback"></div>
+
+            <div style="margin-top: 10px;">
+                <button onclick="giveHint()" style="font-size: 0.7rem;">💡 INDICE</button>
+                <button onclick="reveal()" style="font-size: 0.7rem; border-color: var(--accent); color: var(--accent);">💀 RÉVÉLER</button>
+            </div>
+
+            <div style="margin-top: 5px;">
+                <button onclick="openModal('voice-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">🗣️ VOIX</button>
+                <button onclick="openModal('rules-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">📜 RÈGLES</button>
+            </div>
+        </div>
+
+        <div id="share-zone" class="hidden">
+            <button onclick="next()" style="margin-top: 20px; border-width: 3px;">SUIVANT ➡️</button>
+            <br>
+            <a id="wa-link" target="_blank"><button style="background:#25D366; color:white; border:none;">PARTAGER WHATSAPP</button></a>
+        </div>
+
+		<div class="footer-links">
+            <button class="secondary-btn" onclick="openModal('contact-modal')">📩 Contact & Suggestions</button>
+            <br>
+            <span class="copyright">© 2026 Ghost Words - Tous droits réservés</span>
+        </div>
+    </div>
+</div>
+
+<div id="voice-modal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="color: var(--neon);">CHOISIR UNE VOIX</h2>
+        <select id="voiceSelect" onchange="window.speechSynthesis.cancel()"></select>
+        <p style="font-size: 0.7rem; color: var(--grey);">Privilégiez les voix "Premium" ou "Enhanced" pour un meilleur rendu.</p>
+        <button onclick="closeModal('voice-modal')">OK</button>
+    </div>
+</div>
+
+<div id="rules-modal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="color: var(--neon);">RÈGLES DU JEU</h2>
+        <div style="text-align: left; font-size: 0.9rem; line-height: 1.4;">
+            <p>Le mot fantôme est un mot (souvent un animal ou objet) caché à la jonction de plusieurs mots dans la phrase.</p>
+            <p><b>Exemple :</b></p>
+            <div style="background: #222; padding: 10px; border-radius: 10px; font-style: italic;">
+                "Qui<span class="highlight-step">conque ombre</span> sa vie..."
+            </div>
+            <p>En écoutant bien, on entend : <b style="color: var(--accent);">CONCOMBRE</b></p>
+        </div>
+        <button onclick="closeModal('rules-modal')">J'AI COMPRIS</button>
+    </div>
+</div>
+
+<div id="contact-modal" class="modal-overlay">
+    <div class="modal-box" style="border-color: var(--accent);">
+        <h2 style="color: var(--accent);">CONTACT ✉️</h2>
+        <form action="https://formspree.io/f/xojvgydb" method="POST">
+            <input type="email" name="email" placeholder="Ton email" required>
+            <textarea name="message" rows="4" placeholder="Ton idée ou ton bug..." required></textarea>
+            <br>
+            <button type="submit">ENVOYER</button>
+            <button type="button" class="secondary-btn" onclick="closeModal('contact-modal')">FERMER</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzOCNGhxKhSf8PAOwpz5jUP_briDy6g3ujnVpgY7hXqW1Puq-vgGogaOLLqAJedcAxp/exec";
+    let levels = [], idx = 0, hints = 0, isBlurred = true;
+
+    async function init() {
+        const btn = document.getElementById('startBtn');
+        btn.innerText = "CHARGEMENT...";
+        try {
+            const res = await fetch(API_URL, { redirect: 'follow' });
+            levels = await res.json();
+            if (levels.length > 0) {
+                document.getElementById('intro-rules').classList.add('hidden');
+                document.getElementById('game-ui').classList.remove('hidden');
+                loadVoices();
+                update();
+            }
+        } catch (err) { alert("Erreur réseau."); btn.innerText = "RÉESSAYER"; }
+    }
+
+    function loadVoices() {
+        const vs = document.getElementById('voiceSelect');
+        const voices = window.speechSynthesis.getVoices();
+        vs.innerHTML = '';
+        const fr = voices.filter(v => v.lang.includes('fr'));
+        fr.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.name;
+            opt.innerText = v.name.replace('Microsoft', '').replace('Google', 'G-').trim();
+            vs.appendChild(opt);
+            if (['premium','enhanced','thomas','audrey'].some(k => v.name.toLowerCase().includes(k))) vs.value = v.name;
+        });
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function toggleBlur() {
+        isBlurred = !isBlurred;
+        const el = document.getElementById('sentence');
+        el.classList.toggle('blur-text', isBlurred);
+        document.getElementById('toggleBlur').innerText = isBlurred ? "👁️ TEXTE" : "👁️ CACHER";
+    }
+
+    function update() {
+        document.getElementById('sentence').innerHTML = `« ${levels[idx].s} »`;
+        document.getElementById('sentence').classList.add('blur-text');
+        isBlurred = true;
+        document.getElementById('userInput').value = "";
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('share-zone').classList.add('hidden');
+        hints = 0;
+        window.speechSynthesis.cancel();
+        updateShareLink();
+    }
+
+    function playVoice(forcedRate = null) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(levels[idx].p || levels[idx].s);
+        const voices = window.speechSynthesis.getVoices();
+        msg.voice = voices.find(v => v.name === document.getElementById('voiceSelect').value);
+        msg.rate = forcedRate || document.getElementById('speedSlider').value;
+        msg.lang = 'fr-FR';
+        window.speechSynthesis.speak(msg);
+    }
+
+    function check() {
+        if(document.getElementById('userInput').value.toLowerCase().trim() === String(levels[idx].a).toLowerCase().trim()) {
+            document.getElementById('feedback').innerText = "✨ BRAVO !";
+            triggerSequence();
+        } else { document.getElementById('feedback').innerText = "❌ Essaie encore..."; }
+    }
+
+    function triggerSequence() {
+        const lvl = levels[idx];
+        const sentenceEl = document.getElementById('sentence');
+        sentenceEl.classList.remove('blur-text');
+        const regex = new RegExp(lvl.h.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        sentenceEl.innerHTML = `« ${lvl.s.replace(regex, (m) => `<span class="highlight-step">${m}</span>`)} »`;
+        setTimeout(() => {
+            sentenceEl.innerHTML = `« ${lvl.s.replace(regex, `<span class="ghost-final">${lvl.a}</span>`)} »`;
+            playVoice(0.6); 
+            document.getElementById('share-zone').classList.remove('hidden');
+        }, 1200);
+    }
+
+    function giveHint() {
+        hints++;
+        document.getElementById('feedback').innerText = "💡 " + (hints === 1 ? levels[idx].i1 : levels[idx].i2);
+    }
+
+    function reveal() { document.getElementById('feedback').innerText = "Réponse : " + levels[idx].a; triggerSequence(); }
+    function next() { idx = (idx + 1) % levels.length; update(); }
+    function updateShareLink() {
+        const t = `Peux-tu trouver le mot caché ? 👻\n"${levels[idx].s}"\nJoue ici : ${window.location.href}`;
+        document.getElementById('wa-link').href = `https://wa.me/?text=${encodeURIComponent(t)}`;
+    }
+</script>
+</body>
+</html>
