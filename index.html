@@ -67,7 +67,21 @@
             margin: 8px 4px;
             text-transform: uppercase;
         }
+        /* Nouvelles règles pour les boutons discrets */
+        .btn-secondary {
+                font-size: 0.65rem !important; 
+                padding: 5px 12px !important;
+                border-color: var(--grey) !important;
+                color: var(--grey) !important;
+                margin-top: 15px !important;
+                opacity: 0.8;
+        }
 
+.btn-secondary:hover {
+    color: var(--ghost) !important;
+    border-color: var(--ghost) !important;
+    box-shadow: 0 0 10px rgba(255,255,255,0.2) !important;
+}
         button:hover {
             background: var(--neon);
             color: var(--bg);
@@ -180,9 +194,9 @@
                 <button onclick="reveal()" style="font-size: 0.7rem; border-color: var(--accent); color: var(--accent);">💀 RÉVÉLER</button>
             </div>
 
-            <div style="margin-top: 5px;">
-                <button onclick="openModal('voice-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">🗣️ VOIX</button>
-                <button onclick="openModal('rules-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">📜 RÈGLES</button>
+            <div style="margin-top: 10px; border-top: 1px solid #222; padding-top: 10px;">
+                <button class="btn-secondary" onclick="openModal('voice-modal')">🗣️ VOIX</button>
+                <button class="btn-secondary" onclick="openModal('rules-modal')">📜 RÈGLES</button>
             </div>
         </div>
 
