@@ -148,7 +148,9 @@
 
 <div class="container">
     <h1>MOTS FANTÔMES 👻</h1>
-    
+	
+    <div id="token-status" style="color: var(--neon); font-size: 1.2rem; margin-bottom: 10px; min-height: 1.5rem;"></div>
+	
     <div id="intro-rules">
         <p>Un mot se cache phonétiquement entre d'autres mots... Saurez-vous l'entendre ?</p>
         <button id="startBtn" onclick="init()">JOUER</button>
@@ -235,6 +237,19 @@
 </div>
 
 <script>
+	// --- SYSTÈME DE MÉMOIRE ---
+	let currentTokens = parseInt(localStorage.getItem('ghost_tokens'));
+	let lastPlayDate = localStorage.getItem('ghost_last_date');
+	let savedIndex = parseInt(localStorage.getItem('ghost_index')) || 0;
+	const today = new Date().toLocaleDateString();
+
+	// Réinitialisation quotidienne
+	if (lastPlayDate !== today) {
+   	 currentTokens = 5;
+    	localStorage.setItem('ghost_tokens', 5);
+    	localStorage.setItem('ghost_last_date', today);
+	}
+// --------------------------
     const API_URL = "https://script.google.com/macros/s/AKfycbzOCNGhxKhSf8PAOwpz5jUP_briDy6g3ujnVpgY7hXqW1Puq-vgGogaOLLqAJedcAxp/exec";
     let levels = [], idx = 0, hints = 0, isBlurred = true;
 
@@ -253,6 +268,28 @@
         } catch (err) { alert("Erreur réseau."); btn.innerText = "RÉESSAYER"; }
     }
 
+	async function init() {
+    if (currentTokens <= 0) {
+        alert("👻 Plus de jetons ! Reviens demain pour de nouveaux mots.");
+        return;
+    }
+    const btn = document.getElementById('startBtn');
+    btn.innerText = "CONNEXION...";
+    try {
+        const res = await fetch(API_URL, { redirect: 'follow' });
+        levels = await res.json();
+        if (levels.length > 0) {
+            document.getElementById('intro-rules').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            loadVoices();
+            
+            // On reprend à l'index sauvegardé ou en aléatoire si fini
+            idx = (savedIndex < levels.length) ? savedIndex : Math.floor(Math.random() * levels.length);
+            
+            update();
+        }
+    } catch (err) { alert("Erreur réseau."); btn.innerText = "RÉESSAYER"; }
+}
     function loadVoices() {
         const vs = document.getElementById('voiceSelect');
         const voices = window.speechSynthesis.getVoices();
@@ -279,16 +316,19 @@
     }
 
     function update() {
-        document.getElementById('sentence').innerHTML = `« ${levels[idx].s} »`;
-        document.getElementById('sentence').classList.add('blur-text');
-        isBlurred = true;
-        document.getElementById('userInput').value = "";
-        document.getElementById('feedback').innerText = "";
-        document.getElementById('share-zone').classList.add('hidden');
-        hints = 0;
-        window.speechSynthesis.cancel();
-        updateShareLink();
-    }
+    // Affichage des jetons
+    document.getElementById('token-status').innerText = "👻 ".repeat(currentTokens);
+    
+    document.getElementById('sentence').innerHTML = `« ${levels[idx].s} »`;
+    document.getElementById('sentence').classList.add('blur-text');
+    isBlurred = true;
+    document.getElementById('userInput').value = "";
+    document.getElementById('feedback').innerText = "";
+    document.getElementById('share-zone').classList.add('hidden');
+    hints = 0;
+    window.speechSynthesis.cancel();
+    updateShareLink();
+}
 
     function playVoice(forcedRate = null) {
         window.speechSynthesis.cancel();
@@ -301,11 +341,22 @@
     }
 
     function check() {
-        if(document.getElementById('userInput').value.toLowerCase().trim() === String(levels[idx].a).toLowerCase().trim()) {
-            document.getElementById('feedback').innerText = "✨ BRAVO !";
-            triggerSequence();
-        } else { document.getElementById('feedback').innerText = "❌ Essaie encore..."; }
-    }
+    if(document.getElementById('userInput').value.toLowerCase().trim() === String(levels[idx].a).toLowerCase().trim()) {
+        document.getElementById('feedback').innerText = "✨ BRAVO !";
+        
+        // CONSOMMATION DU JETON
+        currentTokens--;
+        localStorage.setItem('ghost_tokens', currentTokens);
+        
+        // PROGRESSION DU MARQUE-PAGE
+        if (savedIndex < levels.length) {
+            savedIndex++;
+            localStorage.setItem('ghost_index', savedIndex);
+        }
+        
+        triggerSequence();
+    } else { document.getElementById('feedback').innerText = "❌ Essaie encore..."; }
+}
 
     function triggerSequence() {
         const lvl = levels[idx];
@@ -326,7 +377,16 @@
     }
 
     function reveal() { document.getElementById('feedback').innerText = "Réponse : " + levels[idx].a; triggerSequence(); }
-    function next() { idx = (idx + 1) % levels.length; update(); }
+    function next() { 
+    if (currentTokens <= 0) {
+        alert("C'était ton dernier jeton ! Reviens demain 👻");
+        location.reload(); // Recharge pour afficher l'écran d'accueil
+    } else {
+        // Si on a fini la liste, on passe en aléatoire, sinon on suit l'index
+        idx = (savedIndex < levels.length) ? savedIndex : Math.floor(Math.random() * levels.length);
+        update(); 
+    }
+}
     function updateShareLink() {
         const t = `Peux-tu trouver le mot caché ? 👻\n"${levels[idx].s}"\nJoue ici : ${window.location.href}`;
         document.getElementById('wa-link').href = `https://wa.me/?text=${encodeURIComponent(t)}`;
