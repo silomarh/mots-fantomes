@@ -158,6 +158,8 @@
 
     <div id="game-ui" class="hidden">
         <div class="card">
+			                <button onclick="openModal('voice-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">🗣️ VOIX</button>
+                <button onclick="openModal('rules-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">📜 RÈGLES</button>
             <div id="sentence" class="blur-text">...</div>
             
             <button id="toggleBlur" onclick="toggleBlur()">👁️ TEXTE</button>
@@ -177,11 +179,6 @@
             <div style="margin-top: 10px;">
                 <button onclick="giveHint()" style="font-size: 0.7rem;">💡 INDICE</button>
                 <button onclick="reveal()" style="font-size: 0.7rem; border-color: var(--accent); color: var(--accent);">💀 RÉVÉLER</button>
-            </div>
-
-			<div style="margin-top: 5px;">
-                <button onclick="openModal('voice-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">🗣️ VOIX</button>
-                <button onclick="openModal('rules-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">📜 RÈGLES</button>
             </div>
         </div>
 
@@ -252,21 +249,6 @@
 // --------------------------
     const API_URL = "https://script.google.com/macros/s/AKfycbzOCNGhxKhSf8PAOwpz5jUP_briDy6g3ujnVpgY7hXqW1Puq-vgGogaOLLqAJedcAxp/exec";
     let levels = [], idx = 0, hints = 0, isBlurred = true;
-
-    async function init() {
-        const btn = document.getElementById('startBtn');
-        btn.innerText = "CHARGEMENT...";
-        try {
-            const res = await fetch(API_URL, { redirect: 'follow' });
-            levels = await res.json();
-            if (levels.length > 0) {
-                document.getElementById('intro-rules').classList.add('hidden');
-                document.getElementById('game-ui').classList.remove('hidden');
-                loadVoices();
-                update();
-            }
-        } catch (err) { alert("Erreur réseau."); btn.innerText = "RÉESSAYER"; }
-    }
 
 	async function init() {
     if (currentTokens <= 0) {
