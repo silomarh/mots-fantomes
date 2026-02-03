@@ -158,8 +158,6 @@
 
     <div id="game-ui" class="hidden">
         <div class="card">
-			                <button onclick="openModal('voice-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">🗣️ VOIX</button>
-                <button onclick="openModal('rules-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">📜 RÈGLES</button>
             <div id="sentence" class="blur-text">...</div>
             
             <button id="toggleBlur" onclick="toggleBlur()">👁️ TEXTE</button>
@@ -180,7 +178,13 @@
                 <button onclick="giveHint()" style="font-size: 0.7rem;">💡 INDICE</button>
                 <button onclick="reveal()" style="font-size: 0.7rem; border-color: var(--accent); color: var(--accent);">💀 RÉVÉLER</button>
             </div>
+
+			<div style="margin-top: 5px;">
+                <button onclick="openModal('voice-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">🗣️ VOIX</button>
+                <button onclick="openModal('rules-modal')" style="font-size: 0.7rem; border-color: var(--grey); color: var(--grey);">📜 RÈGLES</button>
+            </div>
         </div>
+		
 
         <div id="share-zone" class="hidden">
             <button onclick="next()" style="margin-top: 20px; border-width: 3px;">SUIVANT ➡️</button>
