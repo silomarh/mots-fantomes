@@ -152,7 +152,7 @@
     <div id="token-status" style="color: var(--neon); font-size: 1.2rem; margin-bottom: 10px; min-height: 1.5rem;"></div>
 	
     <div id="intro-rules">
-        <p>Un mot se cache phonétiquement entre d'autres mots... Saurez-vous l'entendre ?</p>
+        <p>Un mot est entendu dans cette phrase sans y être présent... Saurez-vous le débusquer ?</p>
         <button id="startBtn" onclick="init()">JOUER</button>
     </div>
 
@@ -212,12 +212,12 @@
     <div class="modal-box">
         <h2 style="color: var(--neon);">RÈGLES DU JEU</h2>
         <div style="text-align: left; font-size: 0.9rem; line-height: 1.4;">
-            <p>Le mot fantôme est un mot (souvent un animal ou objet) caché à la jonction de plusieurs mots dans la phrase.</p>
+            <p>Le mot fantôme est un mot non écrit dans la phrase mais dont le son est formé par la jonction de plusieurs syllabes consécutives.</p>
             <p><b>Exemple :</b></p>
             <div style="background: #222; padding: 10px; border-radius: 10px; font-style: italic;">
-                "Qui<span class="highlight-step">conque ombre</span> sa vie..."
+                "Il fait <span class="highlight-step">chaud sur</span> Paris..."
             </div>
-            <p>En écoutant bien, on entend : <b style="color: var(--accent);">CONCOMBRE</b></p>
+            <p>En écoutant bien, on entend : <b style="color: var(--accent);">CHAUSSURE</b></p>
         </div>
         <button onclick="closeModal('rules-modal')">J'AI COMPRIS</button>
     </div>
