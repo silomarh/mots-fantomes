@@ -193,22 +193,21 @@
 <div class="container">
     <h1>MOTS FANTÔMES 👻</h1>
     
-    <div id="stat-bar" style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
-        <div class="progress-container">
-            <div id="progress-bar"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; width: 85%;">
-            <span id="progression-text" class="status-text">Mots : 0 / 5</span>
-            <span id="joker-text" class="status-text" style="color: var(--neon);">Jokers : 🃏🃏🃏🃏🃏</span>
-        </div>
-    </div>
-    
     <div id="intro-rules">
         <p id="intro-text">Un mot est entendu dans cette phrase sans y être présent... Saurez-vous le débusquer ?</p>
         <button id="startBtn" onclick="init()">JOUER</button>
     </div>
 
     <div id="game-ui" class="hidden">
+        <div id="stat-bar" style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+            <div class="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+            <div style="width: 85%; text-align: left;">
+                <span id="progression-text" class="status-text">Progression : 0 / 5</span>
+            </div>
+        </div>
+
         <div class="card">
             <div id="sentence" class="blur-text">...</div>
             
@@ -284,15 +283,15 @@
 
 <script>
     // --- LOGIQUE MÉMOIRE ---
-    let jokers = localStorage.getItem('ghost_jokers') === null ? 5 : parseInt(localStorage.getItem('ghost_jokers'));
+    let score = parseInt(localStorage.getItem('ghost_score')) || 0;
     let wordsDone = parseInt(localStorage.getItem('ghost_words_done')) || 0;
     let savedIndex = parseInt(localStorage.getItem('ghost_index')) || 0;
     let lastPlayDate = localStorage.getItem('ghost_last_date');
     const today = new Date().toLocaleDateString();
 
     if (lastPlayDate !== today) {
-        jokers = 5; wordsDone = 0;
-        localStorage.setItem('ghost_jokers', 5);
+        score = 0; wordsDone = 0;
+        localStorage.setItem('ghost_score', 0);
         localStorage.setItem('ghost_words_done', 0);
         localStorage.setItem('ghost_last_date', today);
     }
@@ -321,8 +320,7 @@
         const bar = document.getElementById('progress-bar');
         const percent = (wordsDone / 5) * 100;
         bar.style.width = Math.min(percent, 100) + "%";
-        document.getElementById('progression-text').innerText = `Mots : ${wordsDone} / 5`;
-        document.getElementById('joker-text').innerText = "Jokers : " + (jokers > 0 ? "🃏".repeat(jokers) : "🚫");
+        document.getElementById('progression-text').innerText = `Progression : ${wordsDone} / 5`;
         
         bar.classList.remove('flash-boost');
         void bar.offsetWidth; 
@@ -346,6 +344,8 @@
         const userVal = document.getElementById('userInput').value.toLowerCase().trim();
         if(userVal === String(levels[idx].a).toLowerCase().trim()) {
             document.getElementById('feedback').innerText = "✨ BRAVO !";
+            score++;
+            localStorage.setItem('ghost_score', score);
             wordsDone++;
             localStorage.setItem('ghost_words_done', wordsDone);
             savedIndex++;
@@ -355,18 +355,14 @@
     }
 
     function reveal() { 
-        if (jokers > 0) {
-            if (confirm("Utiliser un Joker 🃏 pour passer ?")) {
-                jokers--;
-                localStorage.setItem('ghost_jokers', jokers);
-                wordsDone++;
-                localStorage.setItem('ghost_words_done', wordsDone);
-                savedIndex++;
-                localStorage.setItem('ghost_index', savedIndex);
-                document.getElementById('feedback').innerText = "Réponse : " + levels[idx].a; 
-                triggerSequence();
-            }
-        } else { alert("Plus de Jokers !"); }
+        if (confirm("Passer ce mot ? (Il ne comptera pas dans ton score final)")) {
+            wordsDone++;
+            localStorage.setItem('ghost_words_done', wordsDone);
+            savedIndex++;
+            localStorage.setItem('ghost_index', savedIndex);
+            document.getElementById('feedback').innerText = "Réponse : " + levels[idx].a; 
+            triggerSequence();
+        }
     }
 
     function triggerSequence() {
@@ -388,7 +384,7 @@
             document.getElementById('game-ui').innerHTML = `
                 <div class="card">
                     <h2 style="color:var(--neon)">SÉRIE TERMINÉE ! 🏆</h2>
-                    <p>Reviens demain pour 5 nouveaux défis.</p>
+                    <p style="font-size: 1.2rem;">Score : <span style="color:var(--accent); font-weight:bold;">${score} / 5</span></p>
                     <button onclick="location.reload()">RETOUR MENU</button>
                 </div>`;
         } else {
