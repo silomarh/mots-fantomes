@@ -382,11 +382,14 @@
     function next() { 
         if (wordsDone >= 5) {
             document.getElementById('game-ui').innerHTML = `
-                <div class="card">
-                    <h2 style="color:var(--neon)">SÉRIE TERMINÉE ! 🏆</h2>
-                    <p style="font-size: 1.2rem;">Score : <span style="color:var(--accent); font-weight:bold;">${score} / 5</span></p>
-                    <button onclick="location.reload()">RETOUR MENU</button>
-                </div>`;
+            <div class="card">
+        <h2 style="color:var(--neon)">SÉRIE TERMINÉE ! 🏆</h2>
+        <p style="font-size: 1.1rem; line-height: 1.5;">
+            Tu as trouvé <span style="color:var(--accent); font-weight:bold;">${score}</span> ${score <= 1 ? "mot" : "mots"} aujourd'hui.<br>
+            Reviens demain pour de nouveaux mots fantômes !
+        </p>
+        <button onclick="location.reload()" style="margin-top: 15px;">RETOUR MENU</button>
+    </div>`;
         } else {
             idx = (savedIndex < levels.length) ? savedIndex : Math.floor(Math.random() * levels.length);
             update(); 
