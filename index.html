@@ -379,22 +379,29 @@
         }, 1200);
     }
 
-    function next() { 
-        if (wordsDone >= 5) {
-            document.getElementById('game-ui').innerHTML = `
+function next() { 
+    // Si score parfait, on offre une 6ème phrase bonus
+    let limit = (score === 5 && wordsDone === 5) ? 6 : 5;
+
+    if (wordsDone >= limit) {
+        document.getElementById('game-ui').innerHTML = `
             <div class="card">
-        <h2 style="color:var(--neon)">SÉRIE TERMINÉE ! 🏆</h2>
-        <p style="font-size: 1.1rem; line-height: 1.5;">
-            Tu as trouvé <span style="color:var(--accent); font-weight:bold;">${score}</span> ${score <= 1 ? "mot" : "mots"} aujourd'hui.<br>
-            Reviens demain pour de nouveaux mots fantômes !
-        </p>
-        <button onclick="location.reload()" style="margin-top: 15px;">RETOUR MENU</button>
-    </div>`;
-        } else {
-            idx = (savedIndex < levels.length) ? savedIndex : Math.floor(Math.random() * levels.length);
-            update(); 
+                <h2 style="color:var(--neon)">${score >= 5 ? "INCROYABLE ! 🏆" : "SÉRIE TERMINÉE ! 🏆"}</h2>
+                <p style="font-size: 1.1rem; line-height: 1.5;">
+                    Tu as trouvé <span style="color:var(--accent); font-weight:bold;">${score}</span> ${score <= 1 ? "mot" : "mots"} aujourd'hui.<br>
+                    ${score >= 5 ? "Un sans-faute magistral !" : ""} Reviens demain pour de nouveaux mots fantômes !
+                </p>
+                <button onclick="location.reload()" style="margin-top: 15px;">RETOUR MENU</button>
+            </div>`;
+    } else {
+        // Si bonus activé, on affiche un petit message d'encouragement
+        if (wordsDone === 5 && score === 5) {
+            document.getElementById('feedback').innerText = "🌟 BONUS : Un 6ème mot pour ton sans-faute !";
         }
+        idx = (savedIndex < levels.length) ? savedIndex : Math.floor(Math.random() * levels.length);
+        update(); 
     }
+}
 
     function playVoice(rate = null) {
         window.speechSynthesis.cancel();
