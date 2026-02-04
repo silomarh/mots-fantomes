@@ -390,16 +390,24 @@
         triggerSequence(); 
     }
 
-    function next() { 
-        if (currentTokens <= 0) {
-            alert("C'était ton dernier jeton ! Reviens demain 👻");
-            location.reload();
-        } else {
-            idx = (savedIndex < levels.length) ? savedIndex : Math.floor(Math.random() * levels.length);
-            update(); 
-        }
-    }
+function next() { 
+    // On récupère le dernier index sauvegardé pour être sûr
+    savedIndex = parseInt(localStorage.getItem('ghost_index')) || 0;
 
+    if (currentTokens <= 0) {
+        alert("C'était ton dernier jeton ! Reviens demain 👻");
+        location.reload();
+    } else {
+        // On force l'index actuel à devenir l'index sauvegardé
+        if (savedIndex < levels.length) {
+            idx = savedIndex;
+        } else {
+            // Si on a fini toutes les phrases de la liste, on pioche au hasard
+            idx = Math.floor(Math.random() * levels.length);
+        }
+        update(); 
+    }
+}
     function updateShareLink() {
         const t = `Peux-tu trouver le mot caché ? 👻\n"${levels[idx].s}"\nJoue ici : ${window.location.href}`;
         document.getElementById('wa-link').href = `https://wa.me/?text=${encodeURIComponent(t)}`;
