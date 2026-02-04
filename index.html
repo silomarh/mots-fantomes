@@ -157,6 +157,29 @@
         .secondary-btn { font-size: 0.75rem; border-color: var(--grey); color: var(--grey); }
         .hidden { display: none !important; }
         .copyright { font-size: 0.7rem; color: var(--grey); margin-top: 10px; display: block; }
+
+        .progress-container {
+    width: 85%;
+    background: #222;
+    border-radius: 10px;
+    height: 12px;
+    margin: 10px 0;
+    border: 1px solid #333;
+    overflow: hidden;
+}
+
+#progress-bar {
+    width: 0%; /* Sera piloté par le JS */
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon), var(--accent));
+    transition: width 0.5s ease-in-out;
+}
+
+.status-text {
+    font-size: 0.8rem;
+    color: var(--grey);
+    margin-top: 5px;
+}
     </style>
 </head>
 <body>
@@ -164,7 +187,15 @@
 <div class="container">
     <h1>MOTS FANTÔMES 👻</h1>
     
-    <div id="token-status" style="color: var(--neon); font-size: 1.2rem; margin-bottom: 10px; min-height: 1.5rem;"></div>
+    <div id="stat-bar" style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+    <div class="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; width: 85%;">
+        <span id="progression-text" class="status-text">Mots : 0 / 5</span>
+        <span id="joker-text" class="status-text" style="color: var(--neon);">Jokers : 🃏🃏🃏🃏🃏</span>
+    </div>
+</div>
     
     <div id="intro-rules">
         <p id="intro-text">Un mot est entendu dans cette phrase sans y être présent... Saurez-vous le débusquer ?</p>
@@ -253,17 +284,34 @@
 
 <script>
     // --- SYSTÈME DE MÉMOIRE ---
-    let currentTokens = localStorage.getItem('ghost_tokens') === null ? 5 : parseInt(localStorage.getItem('ghost_tokens'));
-    let lastPlayDate = localStorage.getItem('ghost_last_date');
-    let savedIndex = parseInt(localStorage.getItem('ghost_index')) || 0;
-    const today = new Date().toLocaleDateString();
+let jokers = localStorage.getItem('ghost_jokers') === null ? 5 : parseInt(localStorage.getItem('ghost_jokers'));
+let wordsDone = parseInt(localStorage.getItem('ghost_words_done')) || 0;
+let lastPlayDate = localStorage.getItem('ghost_last_date');
+let savedIndex = parseInt(localStorage.getItem('ghost_index')) || 0;
+const today = new Date().toLocaleDateString();
 
-    // Réinitialisation quotidienne
-    if (lastPlayDate !== today) {
-        currentTokens = 5;
-        localStorage.setItem('ghost_tokens', 5);
-        localStorage.setItem('ghost_last_date', today);
-    }
+if (lastPlayDate !== today) {
+    jokers = 5;
+    wordsDone = 0;
+    localStorage.setItem('ghost_jokers', 5);
+    localStorage.setItem('ghost_words_done', 0);
+    localStorage.setItem('ghost_last_date', today);
+}
+
+// Mise à jour visuelle (à appeler dans update())
+function updateStatus() {
+    const bar = document.getElementById('progress-bar');
+    const progText = document.getElementById('progression-text');
+    const jokerText = document.getElementById('joker-text');
+
+    // Mise à jour de la barre (max 5 mots)
+    const percent = (wordsDone / 5) * 100;
+    bar.style.width = Math.min(percent, 100) + "%";
+    progText.innerText = `Mots : ${wordsDone} / 5`;
+    
+    // Mise à jour des jokers
+    jokerText.innerText = "Jokers : " + "🃏".repeat(Math.max(0, jokers));
+}
 
     const API_URL = "https://script.google.com/macros/s/AKfycbzOCNGhxKhSf8PAOwpz5jUP_briDy6g3ujnVpgY7hXqW1Puq-vgGogaOLLqAJedcAxp/exec";
     let levels = [], idx = 0, hints = 0, isBlurred = true;
@@ -324,6 +372,7 @@
     }
 
     function update() {
+        updateStatus();
         document.getElementById('token-status').innerText = "👻 ".repeat(currentTokens);
         document.getElementById('sentence').innerHTML = `« ${levels[idx].s} »`;
         document.getElementById('sentence').classList.add('blur-text');
@@ -346,26 +395,24 @@
         window.speechSynthesis.speak(msg);
     }
 
-    function check() {
-        const userVal = document.getElementById('userInput').value.toLowerCase().trim();
-        const correctVal = String(levels[idx].a).toLowerCase().trim();
+function check() {
+    const userVal = document.getElementById('userInput').value.toLowerCase().trim();
+    const correctVal = String(levels[idx].a).toLowerCase().trim();
 
-        if(userVal === correctVal) {
-            document.getElementById('feedback').innerText = "✨ BRAVO !";
-            
-            currentTokens--;
-            localStorage.setItem('ghost_tokens', currentTokens);
-            
-            if (savedIndex < levels.length) {
-                savedIndex++;
-                localStorage.setItem('ghost_index', savedIndex);
-            }
-            
-            triggerSequence();
-        } else { 
-            document.getElementById('feedback').innerText = "❌ Essaie encore..."; 
-        }
+    if(userVal === correctVal) {
+        document.getElementById('feedback').innerText = "✨ BRAVO !";
+        
+        wordsDone++; // On progresse dans la barre
+        localStorage.setItem('ghost_words_done', wordsDone);
+        
+        savedIndex++;
+        localStorage.setItem('ghost_index', savedIndex);
+        
+        triggerSequence();
+    } else { 
+        document.getElementById('feedback').innerText = "❌ Essaie encore..."; 
     }
+}
 
     function triggerSequence() {
         const lvl = levels[idx];
@@ -385,26 +432,37 @@
         document.getElementById('feedback').innerText = "💡 " + (hints === 1 ? levels[idx].i1 : levels[idx].i2);
     }
 
-    function reveal() { 
-        document.getElementById('feedback').innerText = "Réponse : " + levels[idx].a; 
-        triggerSequence(); 
+function reveal() { 
+    if (jokers > 0) {
+        if (confirm("Utiliser un Joker 🃏 pour voir la réponse ?")) {
+            jokers--;
+            localStorage.setItem('ghost_jokers', jokers);
+            
+            wordsDone++; // On avance aussi la barre car le mot est "passé"
+            localStorage.setItem('ghost_words_done', wordsDone);
+            
+            savedIndex++;
+            localStorage.setItem('ghost_index', savedIndex);
+            
+            document.getElementById('feedback').innerText = "Réponse : " + levels[idx].a; 
+            triggerSequence();
+        }
+    } else {
+        alert("Plus de Jokers disponibles !");
     }
+}
 
 function next() { 
-    // On récupère le dernier index sauvegardé pour être sûr
-    savedIndex = parseInt(localStorage.getItem('ghost_index')) || 0;
-
-    if (currentTokens <= 0) {
-        alert("C'était ton dernier jeton ! Reviens demain 👻");
-        location.reload();
+    if (wordsDone >= 5) {
+        // Écran de fin
+        document.getElementById('game-ui').innerHTML = `
+            <div class="card">
+                <h2 style="color:var(--neon)">SÉRIE TERMINÉE ! 🏆</h2>
+                <p>Tu as trouvé tes 5 fantômes du jour.</p>
+                <button onclick="location.reload()">RETOUR</button>
+            </div>`;
     } else {
-        // On force l'index actuel à devenir l'index sauvegardé
-        if (savedIndex < levels.length) {
-            idx = savedIndex;
-        } else {
-            // Si on a fini toutes les phrases de la liste, on pioche au hasard
-            idx = Math.floor(Math.random() * levels.length);
-        }
+        idx = savedIndex;
         update(); 
     }
 }
