@@ -35,6 +35,41 @@
             margin-bottom: 5px;
         }
 
+        /* --- STREAK --- */
+        .streak-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 8px 0 4px 0;
+            font-size: 0.95rem;
+        }
+
+        .streak-count {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #ff9500;
+            text-shadow: 0 0 10px #ff9500;
+        }
+
+        .streak-label {
+            font-size: 0.75rem;
+            color: var(--grey);
+        }
+
+        .streak-frozen {
+            color: #aaa;
+            text-shadow: none;
+        }
+
+        @keyframes streak-pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+
+        .streak-pop { animation: streak-pop 0.4s ease; }
+
         /* --- SYSTÈME DE PROGRESSION --- */
         .progress-container {
             width: 85%;
@@ -186,12 +221,32 @@
         .secondary-btn { font-size: 0.75rem; border-color: var(--grey); color: var(--grey); }
         .hidden { display: none !important; }
         .copyright { font-size: 0.7rem; color: var(--grey); margin-top: 10px; display: block; }
+
+        .retry-btn {
+            font-size: 0.85rem;
+            border-color: var(--accent);
+            color: var(--accent);
+            margin-top: 10px;
+        }
+
+        .share-nudge {
+            font-size: 0.8rem;
+            color: var(--grey);
+            margin: 6px 0 2px 0;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>MOTS FANTÔMES 👻</h1>
+
+    <!-- STREAK AFFICHÉ EN PERMANENCE -->
+    <div class="streak-bar">
+        <span id="streak-fire">🔥</span>
+        <span id="streak-count" class="streak-count">0</span>
+        <span class="streak-label">jour(s) d'affilée</span>
+    </div>
     
     <div id="intro-rules">
         <p id="intro-text">Un mot est entendu dans cette phrase sans y être présent... Saurez-vous le débusquer ?</p>
@@ -220,7 +275,7 @@
                        oninput="document.getElementById('speedVal').innerText = this.value">
             </div>
 
-            <input type="text" id="userInput" placeholder="Quel est le mot caché ?" autocomplete="off">
+            <input type="text" id="userInput" placeholder="Quel est le mot caché ?" autocomplete="off" onkeydown="if(event.key==='Enter') check()">
             <br>
             <button onclick="check()">VALIDER</button>
             <div id="feedback"></div>
@@ -239,6 +294,7 @@
         <div id="share-zone" class="hidden">
             <button onclick="next()" style="margin-top: 20px; border-width: 3px;">SUIVANT ➡️</button>
             <br>
+            <p class="share-nudge">Défie tes amis 👇</p>
             <a id="wa-link" target="_blank"><button style="background:#25D366; color:white; border:none;">PARTAGER WHATSAPP</button></a>
         </div>
 
@@ -282,12 +338,56 @@
 </div>
 
 <script>
+    // --- LOGIQUE STREAK ---
+    const today = new Date().toLocaleDateString();
+    const yesterday = new Date(Date.now() - 86400000).toLocaleDateString();
+
+    let streak = parseInt(localStorage.getItem('ghost_streak')) || 0;
+    let lastPlayDate = localStorage.getItem('ghost_last_date');
+    let streakPlayedToday = localStorage.getItem('ghost_streak_played_today') === today;
+
+    // Si la dernière session n'était ni aujourd'hui ni hier → streak cassé
+    if (lastPlayDate && lastPlayDate !== today && lastPlayDate !== yesterday) {
+        streak = 0;
+        localStorage.setItem('ghost_streak', 0);
+    }
+
+    function updateStreakDisplay() {
+        const countEl = document.getElementById('streak-count');
+        const fireEl = document.getElementById('streak-fire');
+        countEl.innerText = streak;
+        if (streak === 0) {
+            fireEl.innerText = '💤';
+            countEl.classList.add('streak-frozen');
+        } else {
+            fireEl.innerText = '🔥';
+            countEl.classList.remove('streak-frozen');
+        }
+    }
+
+    function incrementStreak() {
+        // On n'incrémente qu'une fois par jour
+        if (!streakPlayedToday) {
+            streak++;
+            localStorage.setItem('ghost_streak', streak);
+            localStorage.setItem('ghost_streak_played_today', today);
+            streakPlayedToday = true;
+
+            // Animation pop
+            const countEl = document.getElementById('streak-count');
+            countEl.classList.remove('streak-pop');
+            void countEl.offsetWidth;
+            countEl.classList.add('streak-pop');
+        }
+        updateStreakDisplay();
+    }
+
+    updateStreakDisplay();
+
     // --- LOGIQUE MÉMOIRE ---
     let score = parseInt(localStorage.getItem('ghost_score')) || 0;
     let wordsDone = parseInt(localStorage.getItem('ghost_words_done')) || 0;
     let savedIndex = parseInt(localStorage.getItem('ghost_index')) || 0;
-    let lastPlayDate = localStorage.getItem('ghost_last_date');
-    const today = new Date().toLocaleDateString();
 
     if (lastPlayDate !== today) {
         score = 0; wordsDone = 0;
@@ -296,7 +396,8 @@
         localStorage.setItem('ghost_last_date', today);
     }
 
-    const API_URL = "https://script.google.com/macros/s/AKfycbzOCNGhxKhSf8PAOwpz5jUP_briDy6g3ujnVpgY7hXqW1Puq-vgGogaOLLqAJedcAxp/exec";
+    const SUPABASE_URL = "https://pkxtusmkduwbbxebpqzt.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_TCwETVjqKmf4OPT5p36d9g_hqOpSQOw";
     let levels = [], idx = 0, hints = 0, isBlurred = true;
 
     async function init() {
@@ -306,14 +407,29 @@
             return;
         }
         try {
-            const res = await fetch(API_URL, { redirect: 'follow' });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/phrases?active=eq.true`, {
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": `Bearer ${SUPABASE_KEY}`
+                }
+            });
             levels = await res.json();
             document.getElementById('intro-rules').classList.add('hidden');
             document.getElementById('game-ui').classList.remove('hidden');
             loadVoices();
-            idx = (savedIndex < levels.length) ? savedIndex : Math.floor(Math.random() * levels.length);
+            // Fix savedIndex overflow : si on dépasse le stock, on repart au début
+            if (savedIndex >= levels.length) {
+                savedIndex = 0;
+                localStorage.setItem('ghost_index', 0);
+            }
+            idx = savedIndex;
             update();
-        } catch (err) { alert("Erreur réseau."); }
+        } catch (err) {
+            document.getElementById('intro-text').innerHTML = `
+                ⚠️ Impossible de charger les phrases.<br>Vérifie ta connexion.
+                <br><button class="retry-btn" onclick="init()">🔄 RÉESSAYER</button>`;
+            document.getElementById('startBtn').classList.add('hidden');
+        }
     }
 
     function updateStatus() {
@@ -350,6 +466,7 @@
             localStorage.setItem('ghost_words_done', wordsDone);
             savedIndex++;
             localStorage.setItem('ghost_index', savedIndex);
+            incrementStreak(); // 🔥 incrémente le streak à la première bonne réponse du jour
             triggerSequence();
         } else { document.getElementById('feedback').innerText = "❌ Essaie encore..."; }
     }
@@ -379,29 +496,29 @@
         }, 1200);
     }
 
-function next() { 
-    // Si score parfait, on offre une 6ème phrase bonus
-    let limit = (score === 5 && wordsDone === 5) ? 6 : 5;
+    function next() { 
+        let limit = (score === 5 && wordsDone === 5) ? 6 : 5;
 
-    if (wordsDone >= limit) {
-        document.getElementById('game-ui').innerHTML = `
-            <div class="card">
-                <h2 style="color:var(--neon)">${score >= 5 ? "INCROYABLE ! 🏆" : "SÉRIE TERMINÉE ! 🏆"}</h2>
-                <p style="font-size: 1.1rem; line-height: 1.5;">
-                    Tu as trouvé <span style="color:var(--accent); font-weight:bold;">${score}</span> ${score <= 1 ? "mot" : "mots"} aujourd'hui.<br>
-                    ${score >= 5 ? "Un sans-faute magistral !" : ""} Reviens demain pour de nouveaux mots fantômes !
-                </p>
-                <button onclick="location.reload()" style="margin-top: 15px;">RETOUR MENU</button>
-            </div>`;
-    } else {
-        // Si bonus activé, on affiche un petit message d'encouragement
-        if (wordsDone === 5 && score === 5) {
-            document.getElementById('feedback').innerText = "🌟 BONUS : Un 6ème mot pour ton sans-faute !";
+        if (wordsDone >= limit) {
+            const streakMsg = streak > 1 ? `🔥 ${streak} jours d'affilée !` : "";
+            document.getElementById('game-ui').innerHTML = `
+                <div class="card">
+                    <h2 style="color:var(--neon)">${score >= 5 ? "INCROYABLE ! 🏆" : "SÉRIE TERMINÉE ! 🏆"}</h2>
+                    <p style="font-size: 1.1rem; line-height: 1.5;">
+                        Tu as trouvé <span style="color:var(--accent); font-weight:bold;">${score}</span> ${score <= 1 ? "mot" : "mots"} aujourd'hui.<br>
+                        ${score >= 5 ? "Un sans-faute magistral !" : ""} Reviens demain pour de nouveaux mots fantômes !
+                    </p>
+                    ${streakMsg ? `<p style="font-size:1.2rem; color:#ff9500; text-shadow: 0 0 10px #ff9500;">${streakMsg}</p>` : ""}
+                    <button onclick="location.reload()" style="margin-top: 15px;">RETOUR MENU</button>
+                </div>`;
+        } else {
+            if (wordsDone === 5 && score === 5) {
+                document.getElementById('feedback').innerText = "🌟 BONUS : Un 6ème mot pour ton sans-faute !";
+            }
+            idx = (savedIndex < levels.length) ? savedIndex : Math.floor(Math.random() * levels.length);
+            update(); 
         }
-        idx = (savedIndex < levels.length) ? savedIndex : Math.floor(Math.random() * levels.length);
-        update(); 
     }
-}
 
     function playVoice(rate = null) {
         window.speechSynthesis.cancel();
@@ -438,7 +555,7 @@ function next() {
         document.getElementById('toggleBlur').innerText = isBlurred ? "👁️ TEXTE" : "👁️ CACHER";
     }
     function updateShareLink() {
-        const t = `Peux-tu trouver le mot caché ? 👻\n"${levels[idx].s}"\nJoue ici : ${window.location.href}`;
+        const t = `👻 Mots Fantômes - Sauras-tu trouver le mot caché dans une phrase ?\nJoue ici : ${window.location.href}`;
         document.getElementById('wa-link').href = `https://wa.me/?text=${encodeURIComponent(t)}`;
     }
 </script>
